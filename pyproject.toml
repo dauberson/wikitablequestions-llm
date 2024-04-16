@@ -1,0 +1,43 @@
+[project]
+name = "wikitablequestions-llm"
+version = "0.0.1"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Dauberson Alves Mól", email = "daubersonmol@gmail.com" },
+]
+dependencies = [
+    "xformers",
+    "bitsandbytes==0.43.0",
+    "torch==2.2.2",
+    "pandas==2.2.1",
+    "peft==0.10.0",
+    "llama-index==0.10.27",
+    "llama-index-embeddings-huggingface==0.2.0",
+    "llama-index-vector-stores-chroma==0.1.6",
+    "llama-index-llms-huggingface==0.1.4",
+    "llama-index-callbacks-arize-phoenix==0.1.4",
+    "arize-phoenix==3.19.4",
+    "optimum==1.18.0",
+    "auto-gptq==0.7.1",
+    "sqlalchemy==2.0.29",
+    "loguru==0.7.2",
+    "fastapi==0.110.1",
+    "uvicorn==0.29.0"
+]
+
+[build-system]
+requires = [
+    "setuptools", "wheel", "build", "setuptools-scm"
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-dir]
+"wikitablequestions_llm_service" = "wikitablequestions-llm-service/main/wikitablequestions_llm_service"
+"wikitablequestions_llm_service_core" = "wikitablequestions-llm-service-core/main/wikitablequestions_llm_service_core"
+
+[tool.setuptools]
+packages = [
+    "wikitablequestions_llm_service",
+    "wikitablequestions_llm_service_core",
+]
