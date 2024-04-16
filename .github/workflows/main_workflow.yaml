@@ -1,0 +1,173 @@
+name: Build, Release, Artifact and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+          cache: pip
+          cache-dependency-path: |
+            **/pyproject.toml
+
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.WIP }}
+          service_account: ${{ secrets.WIP_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: ">= 468.0.0"# You must use the Cloud SDK version 390.0.0 or later to authenticate the bq and gsutil tools.
+
+      - name: GCloud Configuration
+        run: |
+          pip install keyrings.google-artifactregistry-auth
+          gcloud config set artifacts/repository ${{ secrets.GCP_PYTHON_REPOSITORY }}
+          gcloud config set artifacts/location ${{ secrets.GCP_REGION }}
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+          gcloud auth login --cred-file="${{ env.GOOGLE_APPLICATION_CREDENTIALS }}"
+          gcloud artifacts print-settings python > ~/.pypirc
+          mkdir -p ~/.config/pip/
+          cp ~/.pypirc ~/.config/pip/pip.conf
+
+      - name: Install Dependencies
+        run: |
+          make install
+
+      - name: Tests
+        run: |
+          make test
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - id: release-please-action
+        uses: google-github-actions/release-please-action@v4.1.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: python
+          target-branch: main
+          skip-github-pull-request: false
+          skip-github-release: false
+
+    outputs:
+      RELEASES_CREATED: steps.release-please-action.outputs.release_created
+      RELEASE_VERSION: ${{ steps.release-please-action.outputs.major }}.${{ steps.release-please-action.outputs.minor }}.${{ steps.release-please-action.outputs.patch }}
+
+  publish-python-packages:
+    name: Build and Publish Python Package
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.COMMIT_REF }}
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install -U pip
+          pip install twine
+          pip install wheel
+          pip install build
+          pip install keyring
+          pip install keyrings.google-artifactregistry-auth
+
+      - name: Build wheel
+        run: |
+          python3 -m build
+
+      - uses: google-github-actions/auth@v2
+        id: auth
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.WIP }}
+          service_account: ${{ secrets.WIP_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: ">= 468.0.0"# You must use the Cloud SDK version 390.0.0 or later to authenticate the bq and gsutil tools.
+
+      - name: GCloud Configuration
+        run: |
+          gcloud config set artifacts/repository ${{ secrets.GCP_PYTHON_REPOSITORY }}
+          gcloud config set artifacts/location ${{ secrets.GCP_REGION }}
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+          gcloud auth login --cred-file="${{ env.GOOGLE_APPLICATION_CREDENTIALS }}"
+          gcloud artifacts print-settings python > ~/.pypirc
+
+      - name: Verify or Delete Release Version Package
+        run: |
+          gcloud artifacts versions delete ${{ inputs.RELEASE_VERSION }} --package=${{ env.REPOSITORY }} --quiet || echo Not found the version ${{ inputs.RELEASE_VERSION }} in repository
+
+      - name: Upload to Artifact Registry
+        run: |
+          twine upload --repository-url https://${{ secrets.GCP_REGION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_PYTHON_REPOSITORY }}/ --non-interactive --config-file=~/.pypirc dist/*
+
+    outputs:
+      RELEASE_VERSION: ${{ inputs.RELEASE_VERSION }}
+      CURRENT_VERSION: ${{ inputs.CURRENT_VERSION }}
+      COMMIT_REF: ${{ github.ref }}
+
+
+  push-docker-image:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.COMMIT_REF }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        id: auth
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.WIP }}
+          service_account: ${{ secrets.WIP_SA }}
+          token_format: access_token
+
+      - name: Setup Google Cloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: ">= 468.0.0"# You must use the Cloud SDK version 390.0.0 or later to authenticate the bq and gsutil tools.
+
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_DOCKER_REPOSITORY }}
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Docker Build and Push Image
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          file: Dockerfile
+          build-args: |
+            AUTHED_ARTIFACT_REG_URL=https://oauth2accesstoken:${{ steps.auth.outputs.access_token }}@${{ secrets.GCP_REGION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_PYTHON_REPOSITORY }}/simple
+            PACKAGE_VERSION=${{ inputs.RELEASE_VERSION }}
+          tags: |
+            ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_DOCKER_REPOSITORY }}/${{ env.REPOSITORY }}:latest
+            ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_DOCKER_REPOSITORY }}/${{ env.REPOSITORY }}:${{ inputs.RELEASE_VERSION }}
