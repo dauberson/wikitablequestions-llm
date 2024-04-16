@@ -55,6 +55,7 @@ jobs:
           make test
 
   release:
+    needs: build
     name: Release
     runs-on: ubuntu-latest
 
@@ -76,6 +77,7 @@ jobs:
       RELEASE_VERSION: ${{ steps.release-please-action.outputs.major }}.${{ steps.release-please-action.outputs.minor }}.${{ steps.release-please-action.outputs.patch }}
 
   publish-python-packages:
+    needs: release
     name: Build and Publish Python Package
     runs-on: ubuntu-latest
 
@@ -131,6 +133,7 @@ jobs:
 
 
   push-docker-image:
+    needs: publish-python-packages
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
 
