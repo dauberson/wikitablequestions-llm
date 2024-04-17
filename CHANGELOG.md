@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/dauberson/wikitablequestions-llm/compare/v0.1.5...v0.2.0) (2024-04-17)
+
+
+### Features
+
+* doc images ([a2333e9](https://github.com/dauberson/wikitablequestions-llm/commit/a2333e9bd6e93edb2356c4644b9da4c398a2a0c8))
+
 ## [0.1.5](https://github.com/dauberson/wikitablequestions-llm/compare/v0.1.4...v0.1.5) (2024-04-17)
 
 
