@@ -10,6 +10,9 @@ permissions:
   contents: write
   pull-requests: write
 
+env:
+  REPOSITORY: ${{ github.event.repository.name }}
+
 jobs:
   build:
     name: Build

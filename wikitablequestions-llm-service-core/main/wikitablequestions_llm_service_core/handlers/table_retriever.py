@@ -21,3 +21,5 @@ def table_retrieval(engine, table_infos):
         VectorStoreIndex,
     )
     obj_retriever = obj_index.as_retriever(similarity_top_k=3)
+
+    return sql_database, obj_retriever, table_schema_objs

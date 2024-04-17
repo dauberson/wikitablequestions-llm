@@ -30,31 +30,7 @@ Tabela ./csv/200-csv/0.csv
 | 2001 | Tuscany                        | –                  | –                  | –                  |                                                                                      |
 | 2013 | Grandine il Vento              | –                  | –                  | –                  |                                                                                      |
 
-Foi usado uma função para percorrer o diretório 200 e adicionando cada dataframe em uma lista:
-
-
-```python
-import logging
-from pathlib import Path
-from typing import Optional, List
-
-import pandas as pd
-
-
-def get_dataframes(csv_id: int) -> Optional[List[pd.DataFrame]]:
-    data_dir = Path(f"./data/WikiTableQuestions/csv/{csv_id}-csv")
-    csv_files = sorted([f for f in data_dir.glob("*.csv")])
-    dataframes_list = []
-    for csv_file in csv_files:
-        logging.info(f"processing file: {csv_file}")
-        try:
-            df = pd.read_csv(csv_file)
-            dataframes_list.append(df)
-        except Exception as e:
-            logging.error(f"Error parsing {csv_file}: {e}")
-            continue
-    return dataframes_list
-```
+Foi usado uma função para percorrer o diretório 200 e adicionando cada dataframe em uma lista: [dataframes.py](wikitablequestions-llm-service-core%2Fmain%2Fwikitablequestions_llm_service_core%2Fhandlers%2Fdataframes.py)
 
 Como os dataframes são de contextos diferentes, foi usado a LLM para obter algumas informações sobre o contexto de cada dataframe, isso auxiliara para armazenar o dado no banco de dados.
 
@@ -72,151 +48,12 @@ Table:
 {table_str}
 """
 ```
+Foi criado duas funções: [extract_wikitables_infos.py](wikitablequestions-llm-service-core%2Fmain%2Fwikitablequestions_llm_service_core%2Fhandlers%2Fextract_wikitables_infos.py), uma para verificar se o dataframe ja tem informações extraidas para evitar consumo excessivo de requisicoes na API do OpenAI, caso exista é retornado as informações que estão armazenadas no diretório [WikiTableQuestions_Infos](wikitablequestions-llm-service-core%2Fmain%2Fwikitablequestions_llm_service_core%2Fdata%2FWikiTableQuestions_Infos), e outra para fazer as requisições das informações de cada tabela.
 
-Para configurar e setar os modelos de llm e embedding foi usado as seguintes funções, como os códigos foram executados localmente e isso exige recursos, foi escolhido o modelo da OpenAI.
+Os resultados podem foram salvos em .json e podem ser vistos no diretório: [WikiTableQuestions_Infos](wikitablequestions-llm-service-core%2Fmain%2Fwikitablequestions_llm_service_core%2Fdata%2FWikiTableQuestions_Infos)
 
-```python
-from llama_index.core import Settings
-import logging
-
-import torch
-from llama_index.core.callbacks import LlamaDebugHandler, CallbackManager
-from llama_index.llms.huggingface import HuggingFaceLLM
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-
-
-def get_llm(
-        model_name: str = None,
-        tokenizer_name: str = None,
-        context_window: int = None,
-        max_new_tokens: int = None,
-        temperature: float = None
-):
-    if not context_window:
-        context_window = 2048
-
-    if not max_new_tokens:
-        max_new_tokens = 256
-
-    if not temperature:
-        temperature = 0.5
-
-    if not model_name:
-        logging.warning("Model not setted, will use default model")
-        model_name = "TheBloke/Llama-2-13B-chat-GPTQ"
-        
-    if not tokenizer_name:
-        if model_name:
-            tokenizer_name = model_name
-        else:
-            tokenizer_name = "TheBloke/Llama-2-13B-chat-GPTQ"
-
-    llama_debug = LlamaDebugHandler(print_trace_on_end=True)
-    callback_manager = CallbackManager([llama_debug])
-
-    return HuggingFaceLLM(
-        context_window=context_window,
-        max_new_tokens=max_new_tokens,
-        generate_kwargs={"temperature": temperature, "do_sample": True},
-        tokenizer_name=tokenizer_name,
-        model_name=model_name,
-        device_map="auto",
-        callback_manager=callback_manager,
-        tokenizer_kwargs={"max_length": 4096},
-        # change these settings below depending on your GPU
-        # model_kwargs={"torch_dtype": torch.float16, "load_in_8bit": False},
-    )
-
-
-def get_embed_model(model_name: str = None, device: str = None):
-    if not model_name:
-        model_name = "BAAI/bge-small-en-v1.5"
-    if not device:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    return HuggingFaceEmbedding(model_name=model_name, cache_folder="./models", device=device)
-
-
-Settings.llm = get_llm()
-Settings.embed_model = get_embed_model()
-```
-
-Com as configurações de modelo, foi criado um LLMTextCompletionProgram para receber os parametros no template do prompt.
-
-```python
-from llama_index.core.program import LLMTextCompletionProgram
-from llama_index.llms.openai import OpenAI
-
-from entities.table_info import TableInfo
-
-llm_text_completion_program = LLMTextCompletionProgram.from_defaults(
-    output_cls=TableInfo,  # output_parser=PydanticOutputParser(output_cls=TableInfo),
-    prompt_template_str=prompt_template_str,
-    # llm=Settings.llm Se tiver configurado o modelo localmente
-    llm=OpenAI(model="gpt-3.5-turbo"),
-    verbose=True,
-)
-```
-
-Foi criado duas funções, uma para verificar se o dataframe ja tem informações extraidas para evitar consumo excessivo de requisicoes na API do OpenAI, caso exista é retornado as informações que estão armazenadas no diretório ```wikitablequestions_infos_dir```,  e outra para fazer as requisições das informações de cada tabela.
-
-```python
-import json
-import logging
-from pathlib import Path
-from typing import List, Optional
-
-import pandas as pd
-from llama_index.core.program import LLMTextCompletionProgram
-
-from entities.table_info import TableInfo
-
-wikitablequestions_infos_dir = "./data/WikiTableQuestions_Infos"
-
-
-def get_wiketable_info_by_idx(idx: int) -> Optional[str]:
-    results_gen = Path(wikitablequestions_infos_dir).glob(f"{idx}_*")
-    results_list = list(results_gen)
-    if len(results_list) == 0:
-        return
-    elif len(results_list) == 1:
-        path = results_list[0]
-        return TableInfo.parse_file(path)
-    else:
-        raise ValueError(
-            f"More than one file matching index: {list(results_gen)}"
-        )
-
-
-def extract_wikitables_infos(dataframes: List[pd.DataFrame], llm_text_completion_program: LLMTextCompletionProgram, ):
-
-    table_names = set()
-    table_infos = []
-    for idx, df in enumerate(dataframes):
-        table_info = get_wiketable_info_by_idx(idx)
-        if table_info:
-            table_infos.append(table_info)
-        else:
-            while True:
-                df_str = df.head(10).to_csv()
-                table_info = llm_text_completion_program(
-                    table_str=df_str,
-                    exclude_table_name_list=str(list(table_names)),
-                )
-                table_name = table_info.table_name
-                logging.info(f"Processed table: {table_name}")
-                if table_name not in table_names:
-                    table_names.add(table_name)
-                    break
-                else:
-                    logging.info(f"Table name {table_name} already exists, trying again.")
-                    pass
-
-            out_file = f"{wikitablequestions_infos_dir}/{idx}_{table_name}.json"
-            json.dump(table_info.dict(), open(out_file, "w"))
-        table_infos.append(table_info)
-
-```
+Para configurar e setar os modelos de llm e embedding foi usado as funções: [llm_model_handler.py](wikitablequestions-llm-service-core%2Fmain%2Fwikitablequestions_llm_service_core%2Fmodels_handlers%2Fllm_model_handler.py) e [embed_model_handler.py](wikitablequestions-llm-service-core%2Fmain%2Fwikitablequestions_llm_service_core%2Fmodels_handlers%2Fembed_model_handler.py).
+Como a aplicação foi executado localmente e no Cloud Run(com poucos recursos), foi escolhido o modelo da OpenAI para otimizar esse gasto de recursos de máquina.
 
 Pontos relevantes dessa parte do fluxo é que foi usado uma configuração de output das interações com o modelo de LLM evitando alucinações e controlando melhor a qualidade do resultado, isso foi configurado usando o parametro ```output_cls```  da função ```LLMTextCompletionProgram.from_defaults()```. 
 Essa configuração permite receber uma classe BaseModel do Pydantic que consegue parsear o output e criar uma instancia dessa classe, tudo isso porque é inserido informações dessa classe no template do prompt.
@@ -237,5 +74,35 @@ class TableInfo(BaseModel):
 
 ```
 
-Essa informações foram utilizadas como metadados das tabelas de cada .csv salvo nas tabelas SQL, foi usado o `sqlalchemy` para orquestrar essa parte do fluxo. 
+Essa informações foram utilizadas como metadados das tabelas de cada .csv, foi usado o `sqlalchemy` para construir essa parte do fluxo.
+Para entender melhor como essas tabelas foram criadas: [create_sql_tables.py](wikitablequestions-llm-service-core%2Fmain%2Fwikitablequestions_llm_service_core%2Fhandlers%2Fcreate_sql_tables.py)
 
+Tudo é válido somente em tempo de execução, sendo alocado em memória, por se tratar de um caso de experimentação. Então, ao reiniciar a aplicação, boa parte é processada novamente.
+
+
+
+### Infraestrutura
+
+- É usado o Github Actions para CI/CD, toda configuração pode ser vista pelo arquivo: [main_workflow.yaml](.github%2Fworkflows%2Fmain_workflow.yaml)
+  - O pipeline tem 4 steps:
+    - Build (Baseada no [pyproject.toml](pyproject.toml))
+    - Release
+    - Publicar o Pacote Python
+    - Build Imagem Docker
+    
+- Foi usado a GCP como Cloud para armazenar os pacotes python e imagens docker.
+  - Para provisionar todos serviços, apis e configurações na GCP foi usado IaC, Terraform. Os arquivos podem ser vistos no diretório: [google-cloud-infrastructure-tf](google-cloud-infrastructure-tf)
+    - Configurações iniciais como ativar apis e criar bucket para salvar os states do terraform: [google-basics-to-init](google-cloud-infrastructure-tf%2Fgoogle-basics-to-init) 
+    - Criação dos repositórios Python e Docker: [google-artifact-registry-repository](google-cloud-infrastructure-tf%2Fgoogle-artifact-registry-repository)
+    - Configuração para o Github Actions conseguir interagir com a GCP via OIDC/WIP: [google-github-actions](google-cloud-infrastructure-tf%2Fgoogle-github-actions)
+
+- Para servir o que foi construido, foi usado FastAPI para conseguir fazer requisições na aplicação, passando as perguntas e obetendo as respostas. Tudo isso esta rodando usando o serviço Cloud Run da GCP.
+  - Pode ser visto pelo link: 
+
+### TO-DO;
+
+- Construir uma interface user friendly, como streamlit para o usuário passar os textos por ela, ao inves de usar o swagger.
+- Configurar o arize-phoenix para ter observabilidade da performance das tasks de LLM
+- Conseguir usar/carregar dentro da aplicação modelos open-source
+  - Como foi usando o Cloud Run para deployar a aplicação, o recurso era limitado, então foi usado a LLM do OpenAI.
+- Usar um banco para salvar os dados e indexes ao inves de salvar tudo em memória

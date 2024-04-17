@@ -1,14 +1,17 @@
 import json
 from loguru import logger
 from pathlib import Path
+import os
 from typing import List, Optional
 
 import pandas as pd
 from llama_index.core.program import LLMTextCompletionProgram
 
-from entities.table_info import TableInfo
+from wikitablequestions_llm_service_core.entities.table_info import TableInfo
 
-wikitablequestions_infos_dir = "./data/WikiTableQuestions_Infos"
+path = os.path.realpath(__file__)
+root_dir = os.path.dirname(path)
+wikitablequestions_infos_dir = f"{Path(root_dir).parent}/data/WikiTableQuestions_Infos"
 
 
 def get_wiketable_info_by_idx(idx: int) -> Optional[TableInfo]:
@@ -24,8 +27,8 @@ def get_wiketable_info_by_idx(idx: int) -> Optional[TableInfo]:
 
 
 def extract_wikitables_infos(
-    dataframes: List[pd.DataFrame],
-    llm_text_completion_program: LLMTextCompletionProgram,
+        dataframes: List[pd.DataFrame],
+        llm_text_completion_program: LLMTextCompletionProgram,
 ):
     table_names = set()
     table_infos = []
