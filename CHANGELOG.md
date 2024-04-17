@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/dauberson/wikitablequestions-llm/compare/v0.1.1...v0.1.2) (2024-04-17)
+
+
+### Bug Fixes
+
+* query pipeline ([d727ed9](https://github.com/dauberson/wikitablequestions-llm/commit/d727ed956e6cfe71f9eab992ac0c1c130131e707))
+
 ## [0.1.1](https://github.com/dauberson/wikitablequestions-llm/compare/v0.1.0...v0.1.1) (2024-04-17)
 
 
