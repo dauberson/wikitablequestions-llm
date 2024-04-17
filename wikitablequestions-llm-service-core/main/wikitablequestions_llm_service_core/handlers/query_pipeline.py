@@ -14,7 +14,6 @@ def get_query_pipeline(
     sql_retriever: SQLRetriever,
     response_synthesis_prompt: PromptTemplate,
 ) -> QueryPipeline:
-
     query_pipeline = QueryPipeline(
         modules={
             "input": InputComponent(),

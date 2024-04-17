@@ -79,7 +79,22 @@ Para entender melhor como essas tabelas foram criadas: [create_sql_tables.py](wi
 
 Tudo é válido somente em tempo de execução, sendo alocado em memória, por se tratar de um caso de experimentação. Então, ao reiniciar a aplicação, boa parte é processada novamente.
 
+Com os metadados e tabelas criados, foi construido uma query pipeline, pode ser visto no arquivo: [query_pipeline.py](wikitablequestions-llm-service-core%2Fmain%2Fwikitablequestions_llm_service_core%2Fhandlers%2Fquery_pipeline.py), para manipular os objetos até conseguir a resposta para uma pergunta. Então, ao se fazer uma perguntar.
+Foi feito algumas manipulações para incluir informações relevantes na busca pela resposta, o template para a pergunta final ficou assim:
 
+```commandline
+    "Given an input question, synthesize a response from the query results.\n"
+    "Query: {query_str}\n"
+    "SQL: {sql_query}\n"
+    "SQL Response: {context_str}\n"
+    "Response: "
+```
+
+Veja que é foi contruido uma janela de contexto, incluido, a query, a query SQL e a respota da query SQL, para tentar encontrar a melhor resposta para cada pergunta.
+
+A pipeline pode ser vista pelo diagrama abaixo:
+
+![query-pipeline.png](images%2Fquery-pipeline.png)
 
 ### Infraestrutura
 
@@ -94,10 +109,14 @@ Tudo é válido somente em tempo de execução, sendo alocado em memória, por s
   - Para provisionar todos serviços, apis e configurações na GCP foi usado IaC, Terraform. Os arquivos podem ser vistos no diretório: [google-cloud-infrastructure-tf](google-cloud-infrastructure-tf)
     - Configurações iniciais como ativar apis e criar bucket para salvar os states do terraform: [google-basics-to-init](google-cloud-infrastructure-tf%2Fgoogle-basics-to-init) 
     - Criação dos repositórios Python e Docker: [google-artifact-registry-repository](google-cloud-infrastructure-tf%2Fgoogle-artifact-registry-repository)
+      ![docker-repo.png](images%2Fdocker-repo.png)![python-repo.png](images%2Fpython-repo.png)
     - Configuração para o Github Actions conseguir interagir com a GCP via OIDC/WIP: [google-github-actions](google-cloud-infrastructure-tf%2Fgoogle-github-actions)
+      ![wip-pool.png](images%2Fwip-pool.png)
 
 - Para servir o que foi construido, foi usado FastAPI para conseguir fazer requisições na aplicação, passando as perguntas e obetendo as respostas. Tudo isso esta rodando usando o serviço Cloud Run da GCP.
-  - Pode ser visto pelo link: 
+  - Pode ser visto pelo links:
+    - Redocly: https://wikitablequestions-llm-hectarevca-ue.a.run.app/service/wikitablequestions-llm
+    - Swagger: https://wikitablequestions-llm-hectarevca-ue.a.run.app/service/wikitablequestions-llm/docs
 
 ### TO-DO;
 
@@ -107,3 +126,4 @@ Tudo é válido somente em tempo de execução, sendo alocado em memória, por s
 - Conseguir usar/carregar dentro da aplicação modelos open-source
   - Como foi usando o Cloud Run para deployar a aplicação, o recurso era limitado, então foi usado a LLM do OpenAI.
 - Usar um banco para salvar os dados e indexes ao inves de salvar tudo em memória
+- Construir uma camada que consiga construir melhor o contexto de cada tabela, sem ser somente fixando o nome das colunas na query, por exemplo, usando similaridade no nome das colunas.
