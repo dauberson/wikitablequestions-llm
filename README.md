@@ -101,6 +101,7 @@ Tudo é válido somente em tempo de execução, sendo alocado em memória, por s
 
 ### TO-DO;
 
+- **Resolver erro da pipeline da query: https://github.com/run-llama/llama_index/issues/10790**
 - Construir uma interface user friendly, como streamlit para o usuário passar os textos por ela, ao inves de usar o swagger.
 - Configurar o arize-phoenix para ter observabilidade da performance das tasks de LLM
 - Conseguir usar/carregar dentro da aplicação modelos open-source

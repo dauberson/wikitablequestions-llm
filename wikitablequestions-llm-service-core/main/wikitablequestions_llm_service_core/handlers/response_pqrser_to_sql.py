@@ -8,7 +8,7 @@ def parse_response_to_sql(response: ChatResponse) -> str:
     if sql_query_start != -1:
         response = response[sql_query_start:]
         if response.startswith("SQLQuery:"):
-            response = response[len("SQLQuery:"):]
+            response = response[len("SQLQuery:") :]
     sql_result_start = response.find("SQLResult:")
     if sql_result_start != -1:
         response = response[:sql_result_start]

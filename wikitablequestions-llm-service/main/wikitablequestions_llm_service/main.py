@@ -5,6 +5,9 @@ from fastapi import FastAPI
 from loguru import logger
 
 from wikitablequestions_llm_service.services.health_service import health_router
+from wikitablequestions_llm_service.services.wikitablequestions_llm_service import (
+    wikitablequestions_llm_router,
+)
 
 APP_NAME = os.environ.get("APPLICATION_NAME")
 
@@ -16,7 +19,7 @@ app = FastAPI(
     openapi_url=prefix + "/openapi.json",
 )
 
-# app.include_router(prefix=prefix, router=wikitablequestions_llm_router)
+app.include_router(prefix=prefix, router=wikitablequestions_llm_router)
 app.include_router(prefix=prefix, router=health_router)
 
 if __name__ == "__main__":

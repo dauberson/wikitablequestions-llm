@@ -27,8 +27,8 @@ def get_wiketable_info_by_idx(idx: int) -> Optional[TableInfo]:
 
 
 def extract_wikitables_infos(
-        dataframes: List[pd.DataFrame],
-        llm_text_completion_program: LLMTextCompletionProgram,
+    dataframes: List[pd.DataFrame],
+    llm_text_completion_program: LLMTextCompletionProgram,
 ):
     table_names = set()
     table_infos = []

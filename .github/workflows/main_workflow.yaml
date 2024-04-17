@@ -75,10 +75,16 @@ jobs:
           skip-github-pull-request: false
           skip-github-release: false
 
+      - name: Release version
+        run: |
+          RELEASE_VERSION=${{ steps.release-please-action.outputs.major }}.${{ steps.release-please-action.outputs.minor }}.${{ steps.release-please-action.outputs.patch }}
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+          echo ${{ env.RELEASE_VERSION }}
+
     outputs:
       COMMIT_REF: ${{ github.ref }}
       RELEASES_CREATED: steps.release-please-action.outputs.release_created
-      RELEASE_VERSION: ${{ steps.release-please-action.outputs.major }}.${{ steps.release-please-action.outputs.minor }}.${{ steps.release-please-action.outputs.patch }}
+      RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
 
   publish-python-packages:
     needs: release
@@ -175,7 +181,6 @@ jobs:
           file: Dockerfile
           build-args: |
             AUTHED_ARTIFACT_REG_URL=https://oauth2accesstoken:${{ steps.auth.outputs.access_token }}@${{ secrets.GCP_REGION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_PYTHON_REPOSITORY }}/simple
-            PACKAGE_VERSION=${{ needs.publish-python-packages.outputs.RELEASE_VERSION }}
           tags: |
             ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_DOCKER_REPOSITORY }}/${{ env.REPOSITORY }}:latest
-            ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_DOCKER_REPOSITORY }}/${{ env.REPOSITORY }}:${{ steps.publish-python-packages.outputs.RELEASE_VERSION }}
+            ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_DOCKER_REPOSITORY }}/${{ env.REPOSITORY }}:${{ needs.publish-python-packages.outputs.RELEASE_VERSION }}
