@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/dauberson/wikitablequestions-llm/compare/v0.1.3...v0.1.4) (2024-04-17)
+
+
+### Bug Fixes
+
+* gh workflow ([5c0ec09](https://github.com/dauberson/wikitablequestions-llm/commit/5c0ec090e3461c0273b2285eb7462118dcb2ebed))
+
 ## [0.1.3](https://github.com/dauberson/wikitablequestions-llm/compare/v0.1.2...v0.1.3) (2024-04-17)
 
 
