@@ -18,11 +18,8 @@ from wikitablequestions_llm_service_core.handlers.extract_wikitables_infos impor
     get_wiketable_info_by_idx
 from wikitablequestions_llm_service_core.handlers.response_pqrser_to_sql import parse_response_to_sql
 from wikitablequestions_llm_service_core.handlers.sql_retriever import get_table_context_str
-from wikitablequestions_llm_service_core.models_handlers.embed_model_handler import (
-    get_embed_model,
-)
 from wikitablequestions_llm_service_core.prompts_templates import (
-    table_prompt_template_str,
+    table_prompt_template_str, response_synthesis_prompt_template_str,
 )
 
 from sqlalchemy import create_engine, MetaData
@@ -74,16 +71,8 @@ if __name__ == "__main__":
     text2sql_prompt = DEFAULT_TEXT_TO_SQL_PROMPT.partial_format(
         dialect=engine.dialect.name
     )
-
-    response_synthesis_prompt_str = (
-        "Given an input question, synthesize a response from the query results.\n"
-        "Query: {query_str}\n"
-        "SQL: {sql_query}\n"
-        "SQL Response: {context_str}\n"
-        "Response: "
-    )
     response_synthesis_prompt = PromptTemplate(
-        response_synthesis_prompt_str,
+        response_synthesis_prompt_template_str,
     )
 
     query_pipeline = QueryPipeline(

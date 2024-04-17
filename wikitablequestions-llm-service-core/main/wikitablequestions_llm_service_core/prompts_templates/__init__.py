@@ -8,3 +8,11 @@ Give me a Summary and Table Name of the table below with the following JSON form
 Table:
 {table_str}\
 """
+
+response_synthesis_prompt_template_str = (
+    "Given an input question, synthesize a response from the query results.\n"
+    "Query: {query_str}\n"
+    "SQL: {sql_query}\n"
+    "SQL Response: {context_str}\n"
+    "Response: "
+)

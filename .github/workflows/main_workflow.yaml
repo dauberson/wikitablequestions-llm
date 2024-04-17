@@ -132,7 +132,7 @@ jobs:
           twine upload --repository-url https://${{ secrets.GCP_REGION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_PYTHON_REPOSITORY }}/ --non-interactive --config-file=~/.pypirc dist/*
 
     outputs:
-      RELEASE_VERSION: ${{ steps.release.outputs.RELEASE_VERSION }}
+      RELEASE_VERSION: ${{ needs.release.outputs.RELEASE_VERSION }}
       COMMIT_REF: ${{ github.ref }}
 
 
@@ -175,7 +175,7 @@ jobs:
           file: Dockerfile
           build-args: |
             AUTHED_ARTIFACT_REG_URL=https://oauth2accesstoken:${{ steps.auth.outputs.access_token }}@${{ secrets.GCP_REGION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_PYTHON_REPOSITORY }}/simple
-            PACKAGE_VERSION=${{ inputs.RELEASE_VERSION }}
+            PACKAGE_VERSION=${{ needs.publish-python-packages.outputs.RELEASE_VERSION }}
           tags: |
             ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_DOCKER_REPOSITORY }}/${{ env.REPOSITORY }}:latest
             ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_DOCKER_REPOSITORY }}/${{ env.REPOSITORY }}:${{ steps.publish-python-packages.outputs.RELEASE_VERSION }}
