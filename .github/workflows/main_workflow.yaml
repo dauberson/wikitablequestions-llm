@@ -76,6 +76,7 @@ jobs:
           skip-github-release: false
 
     outputs:
+      COMMIT_REF: ${{ github.ref }}
       RELEASES_CREATED: steps.release-please-action.outputs.release_created
       RELEASE_VERSION: ${{ steps.release-please-action.outputs.major }}.${{ steps.release-please-action.outputs.minor }}.${{ steps.release-please-action.outputs.patch }}
 
@@ -88,7 +89,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.COMMIT_REF }}
+          ref: ${{ steps.release.outputs.COMMIT_REF }}
 
       - name: Install Dependencies
         run: |
@@ -131,8 +132,7 @@ jobs:
           twine upload --repository-url https://${{ secrets.GCP_REGION }}-python.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_PYTHON_REPOSITORY }}/ --non-interactive --config-file=~/.pypirc dist/*
 
     outputs:
-      RELEASE_VERSION: ${{ inputs.RELEASE_VERSION }}
-      CURRENT_VERSION: ${{ inputs.CURRENT_VERSION }}
+      RELEASE_VERSION: ${{ steps.release.outputs.RELEASE_VERSION }}
       COMMIT_REF: ${{ github.ref }}
 
 
@@ -145,7 +145,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.COMMIT_REF }}
+          ref: ${{ steps.publish-python-packages.outputs.COMMIT_REF }}
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -178,4 +178,4 @@ jobs:
             PACKAGE_VERSION=${{ inputs.RELEASE_VERSION }}
           tags: |
             ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_DOCKER_REPOSITORY }}/${{ env.REPOSITORY }}:latest
-            ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_DOCKER_REPOSITORY }}/${{ env.REPOSITORY }}:${{ inputs.RELEASE_VERSION }}
+            ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_DOCKER_REPOSITORY }}/${{ env.REPOSITORY }}:${{ steps.publish-python-packages.outputs.RELEASE_VERSION }}
