@@ -40,6 +40,7 @@ jobs:
           pip install keyrings.google-artifactregistry-auth
           gcloud config set artifacts/repository ${{ secrets.GCP_PYTHON_REPOSITORY }}
           gcloud config set artifacts/location ${{ secrets.GCP_REGION }}
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
           gcloud auth login --cred-file="${{ env.GOOGLE_APPLICATION_CREDENTIALS }}"
           gcloud artifacts print-settings python > ~/.pypirc
           mkdir -p ~/.config/pip/
