@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1](https://github.com/dauberson/wikitablequestions-llm/compare/v0.1.0...v0.1.1) (2024-04-17)
+
+
+### Bug Fixes
+
+* github workflow ([ec619eb](https://github.com/dauberson/wikitablequestions-llm/commit/ec619eb9e9db1261ec519e4319aa39ae84fcca79))
+* github workflow ([237a369](https://github.com/dauberson/wikitablequestions-llm/commit/237a3697c7a7e26771c94dd800ff83a3226fa62d))
+
 ## 0.1.0 (2024-04-17)
 
 
