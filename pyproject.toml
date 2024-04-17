@@ -23,7 +23,8 @@ dependencies = [
     "sqlalchemy==2.0.29",
     "loguru==0.7.2",
     "fastapi==0.110.1",
-    "uvicorn==0.29.0"
+    "uvicorn==0.29.0",
+    "pytest==8.1.1"
 ]
 
 [build-system]
